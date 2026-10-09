@@ -95,23 +95,37 @@ def test_velocity_action_uses_measured_position_and_binary_gripper(adapter_and_d
 
 def test_chunk_replanning_and_exact_control_rate(adapter_and_data, tmp_path: Path):
   adapter, data = adapter_and_data
+  shown: list[tuple[dict[str, Any], float]] = []
+  resets: list[bool] = []
 
   class Policy:
     def __init__(self):
       self.calls = 0
 
     def infer(self, observation: dict[str, Any]) -> dict[str, Any]:
+      # The preview must show this request before inference can block.
+      assert shown[-1][0] is observation
       self.calls += 1
       # Shorter chunks are accepted instead of hard-coding an obsolete horizon.
       return {"actions": np.zeros((3, 8), dtype=np.float32)}
 
   policy = Policy()
   cfg = DroidInferenceConfig(max_steps=15, open_loop_horizon=8, output_dir=tmp_path)
-  rollout = DroidRollout(cfg, adapter, policy, data)
+  rollout = DroidRollout(
+    cfg,
+    adapter,
+    policy,
+    data,
+    on_observation=lambda obs, timestamp: shown.append((obs, timestamp)),
+    on_reset=lambda: resets.append(True),
+  )
   while not rollout.done(data):
     rollout.step(adapter.model, data)
   assert rollout.control_steps == 15
   assert policy.calls == 5
+  assert len(shown) == policy.calls
+  assert len(resets) == 1
+  assert np.allclose([timestamp for _, timestamp in shown], np.arange(5) / 5)
   assert data.time == pytest.approx(1.0)
   times = np.asarray(rollout.timestamps)
   assert np.all(np.abs(times - np.arange(15) / 15) < 0.0021)
@@ -123,8 +137,13 @@ def test_chunk_replanning_and_exact_control_rate(adapter_and_data, tmp_path: Pat
   assert rollout.output_dir != previous_output
   assert rollout.chunk_index == rollout.control_steps == 0
   assert data.time == 0.0
+  assert len(resets) == 2
+  # Saving the old episode should not replace the last submitted policy input.
+  assert len(shown) == policy.calls
   rollout.step(adapter.model, data)
   assert policy.calls == 6
+  assert len(shown) == policy.calls
+  assert shown[-1][1] == 0.0
 
 
 def test_viser_worker_reset_and_step_keep_renderer_on_owner_thread(

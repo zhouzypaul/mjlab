@@ -10,6 +10,7 @@ The DROID/OpenPI experiment lives in `droid_openpi/`:
 - `run.py`: command-line options, rollout scheduling, and saved records.
 - `policy_adapter.py`: model observations, camera rendering, and action conversion.
 - `client.py`: OpenPI WebSocket and NumPy MessagePack transport.
+- `visualizer.py`: Viser image panels for the exterior and wrist policy inputs.
 
 Run from the repository root with an OpenPI server listening on port 8000:
 

@@ -25,6 +25,8 @@ def _get_table_spec() -> mujoco.MjSpec:
     type=mujoco.mjtGeom.mjGEOM_BOX,
     pos=(0.45, 0.0, -0.025),
     size=(0.75, 0.65, 0.025),
+    solref=(0.004, 1.0),
+    solimp=(0.99, 0.99, 0.001, 0.5, 2.0),
     rgba=(0.65, 0.55, 0.42, 1.0),
   )
   for x in (-0.2, 1.1):
@@ -49,6 +51,10 @@ def _get_cube_spec() -> mujoco.MjSpec:
     size=(0.025,) * 3,
     mass=0.05,
     friction=(1.0, 0.005, 0.0001),
+    # Stiff contacts at twice the 2 ms timestep limit excessive penetration.
+    # The higher-priority Menagerie finger pads retain their own compliance.
+    solref=(0.004, 1.0),
+    solimp=(0.99, 0.99, 0.001, 0.5, 2.0),
     rgba=(0.8, 0.15, 0.1, 1.0),
   )
   return spec

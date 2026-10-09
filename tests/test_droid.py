@@ -33,6 +33,53 @@ def test_droid_gripper_closes_and_reopens() -> None:
       assert np.all(data.qpos[drivers] < 0.01)
 
 
+def test_droid_cube_resists_table_penetration_under_load() -> None:
+  model = Scene(get_droid_cube_scene_cfg(), device="cpu").compile()
+  data = mujoco.MjData(model)
+  mujoco.mj_resetDataKeyframe(model, data, 0)
+  cube = model.geom("cube/cube_geom").id
+  table = model.geom("table/tabletop").id
+  # Press on the 50 g cube with an additional 10 N, like a descending gripper.
+  data.xfrc_applied[model.body("cube/cube").id, 2] = -10.0
+  max_penetration = 0.0
+  for _ in range(500):
+    mujoco.mj_step(model, data)
+    for contact in data.contact:
+      if {contact.geom1, contact.geom2} == {cube, table}:
+        max_penetration = max(max_penetration, -contact.dist)
+  contacts = [c for c in data.contact if {c.geom1, c.geom2} == {cube, table}]
+  assert contacts
+  assert max_penetration < 0.001
+  assert max(-c.dist for c in contacts) < 0.0001
+  assert not np.any(data.warning.number)
+
+
+def test_droid_gripper_blocks_on_cube_and_releases() -> None:
+  model = Scene(get_droid_cube_scene_cfg(), device="cpu").compile()
+  # Isolate finger/cube contact from falling and table contact.
+  model.opt.gravity[:] = 0.0
+  data = mujoco.MjData(model)
+  mujoco.mj_resetDataKeyframe(model, data, 0)
+  mujoco.mj_forward(model, data)
+  cube = model.geom("cube/cube_geom").id
+  cube_qpos = model.joint("cube/cube_joint").qposadr[0]
+  data.qpos[cube_qpos : cube_qpos + 3] = data.site("robot/grasp_site").xpos
+  for closure in (1.0, 0.0):
+    data.ctrl[7] = closure
+    for _ in range(500):
+      mujoco.mj_step(model, data)
+    contacts = [c for c in data.contact if cube in (c.geom1, c.geom2)]
+    assert np.all(np.isfinite(data.qpos))
+    assert not np.any(data.warning.number)
+    if closure:
+      touched = {g for c in contacts for g in (c.geom1, c.geom2)}
+      for side in ("left", "right"):
+        assert model.geom(f"robot/robotiq_{side}_pad1").id in touched
+      assert max(-c.dist for c in contacts) < 0.001
+    else:
+      assert not contacts
+
+
 def test_droid_mount_matches_reference_and_collides_with_objects() -> None:
   spec = get_spec()
   model = spec.compile()

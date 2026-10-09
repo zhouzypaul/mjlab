@@ -3,9 +3,10 @@
 import contextlib
 import json
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 from uuid import uuid4
 
 import imageio.v3 as iio
@@ -21,8 +22,10 @@ from experiments.droid_openpi.policy_adapter import (
   DroidPolicyAdapter,
   InferencePolicy,
 )
+from experiments.droid_openpi.visualizer import PolicyCameraPanels
 from mjlab.scene import Scene
 from mjlab.tasks.manipulation.config.droid.cube_scene import get_droid_cube_scene_cfg
+from mjlab.viewer.viser.shading import set_glb_flat_shading
 
 
 @dataclass
@@ -52,10 +55,15 @@ class DroidRollout:
     adapter: DroidPolicyAdapter,
     policy: InferencePolicy,
     data: mujoco.MjData,
+    *,
+    on_observation: Callable[[dict[str, Any], float], None] | None = None,
+    on_reset: Callable[[], None] | None = None,
   ) -> None:
     self.cfg = cfg
     self.adapter = adapter
     self.policy = policy
+    self.on_observation = on_observation
+    self.on_reset = on_reset
     self.cube_id = adapter.model.body("cube/cube").id
     self.reset(adapter.model, data)
 
@@ -78,6 +86,8 @@ class DroidRollout:
     (self.output_dir / "server_metadata.json").write_text(
       json.dumps(getattr(self.policy, "metadata", {}), indent=2)
     )
+    if self.on_reset is not None:
+      self.on_reset()
 
   def done(self, data: mujoco.MjData) -> bool:
     return data.time + 1e-9 >= self.cfg.max_steps / DROID_CONTROL_HZ
@@ -88,6 +98,8 @@ class DroidRollout:
     if data.time + 1e-9 >= self.control_steps / DROID_CONTROL_HZ:
       if self.chunk_index >= min(self.cfg.open_loop_horizon, len(self.chunk)):
         observation = self.adapter.observation(data, self.cfg.prompt)
+        if self.on_observation is not None:
+          self.on_observation(observation, float(data.time))
         start = time.monotonic()
         result = self.policy.infer(observation)
         chunk = np.asarray(result.get("actions"), dtype=np.float32)
@@ -202,7 +214,12 @@ def run_droid_inference(cfg: DroidInferenceConfig) -> None:
     print(f"Task: {cfg.prompt}", flush=True)
     try:
       if cfg.viewer == "viser":
-        Viewer(model, data, step_fn=rollout.step, reset_fn=rollout.reset).run()
+        viewer = Viewer(model, data, step_fn=rollout.step, reset_fn=rollout.reset)
+        set_glb_flat_shading(viewer.scene.server, "/bodies/cube/cube/group0")
+        panels = PolicyCameraPanels(viewer.scene.server, cfg.external_camera)
+        rollout.on_observation = panels.update
+        rollout.on_reset = panels.reset
+        viewer.run()
       elif cfg.viewer == "native":
         with mujoco.viewer.launch_passive(model, data) as viewer:
           viewer.opt.geomgroup[3] = 0

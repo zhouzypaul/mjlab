@@ -18,6 +18,7 @@ from mjlab.tasks.manipulation.config.droid.cube_scene import (
   DROID_CUBE_CAMERA_NAMES,
   get_droid_cube_scene_cfg,
 )
+from mjlab.viewer.viser.shading import set_glb_flat_shading
 
 
 @dataclass
@@ -59,7 +60,9 @@ def run_droid(cfg: DroidConfig) -> None:
     mujoco.mj_step(model, data)
 
   if cfg.viewer == "viser":
-    Viewer(model, data, step_fn=step, reset_fn=reset).run()
+    viewer = Viewer(model, data, step_fn=step, reset_fn=reset)
+    set_glb_flat_shading(viewer.scene.server, "/bodies/cube/cube/group0")
+    viewer.run()
   elif cfg.viewer == "native":
     with mujoco.viewer.launch_passive(model, data) as viewer:
       viewer.opt.geomgroup[2] = 1

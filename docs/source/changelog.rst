@@ -8,6 +8,9 @@ Upcoming version (not yet released)
 Added
 ^^^^^
 
+- Added exterior and wrist policy-input image panels to the DROID inference
+  Viser viewer, updated on each policy request and cleared on reset.
+
 - Added OpenPI ``pi05_droid`` inference for the DROID tabletop simulation, with
   RGB/state observations, normalized velocity control, and rollout records.
 
@@ -34,6 +37,9 @@ Changed
 
 Fixed
 ^^^^^
+
+- Reduced DROID cube/table contact penetration and removed smooth shading
+  across cube edges in the demo and OpenPI Viser viewers.
 
 - Added the missing DROID wrist adapter using PolaRiS/RoboLab's cylinder
   dimensions and placement, closing the visible arm/gripper gap and adding

@@ -74,6 +74,10 @@ The robot base is at the origin; +X points into the workspace and +Z points up.
 The table surface is at z=0 and the floor is at z=-0.697 m. The table is a simple
 box fixture with legs, rather than RoboLab's USD table mesh.
 
+The cube and tabletop use stiff contact settings to reduce penetration under
+gripper loads. Finger pads retain Menagerie's higher-priority contact settings.
+The Viser demo and inference viewer render the cube with flat face normals.
+
 The exterior camera positions are (0.05, +0.57, 0.66) and
 (0.05, -0.57, 0.66) m, with RoboLab's OpenGL orientations. The wrist camera
 uses RoboLab's calibrated 2.8 focal length and 5.376 by 3.024 aperture; the
