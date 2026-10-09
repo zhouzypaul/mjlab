@@ -12,12 +12,6 @@ from mjlab.entity import EntityArticulationInfoCfg, EntityCfg
 
 _XML_DIR = Path(__file__).parent / "xmls"
 DROID_HOME = (0.0, -math.pi / 5, 0.0, -4 * math.pi / 5, 0.0, 3 * math.pi / 5, 0.0)
-DROID_CAMERA_NAMES = (
-  "over_shoulder_left_camera",
-  "over_shoulder_right_camera",
-  "wrist_cam",
-)
-
 # RoboLab's base_link uses +X along the fingers; Menagerie uses +Z.
 # Rotation taking vectors in RoboLab base_link into Menagerie robotiq_base.
 _BASE_LINK_QUAT = (math.sqrt(0.5), 0.0, -math.sqrt(0.5), 0.0)
@@ -49,6 +43,28 @@ def get_spec() -> mujoco.MjSpec:
     spec.delete(key)
   for light in list(spec.lights):
     spec.delete(light)
+
+  # PolaRiS/RoboLab panda_link8/gripper_adapter: cylinder diameter 0.075 m,
+  # height 0.018 m, centered 0.009 m beyond the link8 flange (link7 Z=0.107).
+  # Keep it on link7's rigid body so the overlapping gripper mounting plate
+  # cannot generate self-contact. Retain Menagerie's explicit link inertias.
+  wrist = spec.body("link7")
+  assert wrist is not None
+  for name, group, collision in (
+    ("gripper_adapter", 2, 0),
+    ("gripper_adapter_collision", 3, 1),
+  ):
+    wrist.add_geom(
+      name=name,
+      type=mujoco.mjtGeom.mjGEOM_CYLINDER,
+      pos=(0.0, 0.0, 0.107 + 0.009),
+      size=(0.0375, 0.009, 0.0),
+      rgba=(0.5, 0.5, 0.5, 1.0),
+      group=group,
+      contype=collision,
+      conaffinity=collision,
+      mass=0.0,
+    )
 
   # RoboLab USD: gripper base is 0.125174 m along link7's +Z.
   # Menagerie base_mount + base offsets contribute 0.0108 m of that distance.

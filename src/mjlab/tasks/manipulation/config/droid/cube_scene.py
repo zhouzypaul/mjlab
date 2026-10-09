@@ -1,16 +1,19 @@
-"""A tabletop workspace for DROID, with the RoboLab three-camera preset."""
+"""DROID cube workspace, with a table and the RoboLab three-camera preset."""
 
 import math
 
 import mujoco
 
-from mjlab.asset_zoo.robots.droid.droid_constants import (
-  DROID_CAMERA_NAMES,
-  get_droid_robot_cfg,
-)
+from mjlab.asset_zoo.robots.droid.droid_constants import get_droid_robot_cfg
 from mjlab.entity import EntityCfg
 from mjlab.scene import SceneCfg
 from mjlab.sensor import CameraSensorCfg
+
+DROID_CUBE_CAMERA_NAMES = (
+  "over_shoulder_left_camera",
+  "over_shoulder_right_camera",
+  "wrist_cam",
+)
 
 
 def _get_table_spec() -> mujoco.MjSpec:
@@ -88,7 +91,7 @@ def _add_external_cameras(body: mujoco.MjsBody) -> None:
     )
 
 
-def get_droid_scene_cfg(
+def get_droid_cube_scene_cfg(
   *,
   num_envs: int = 1,
   camera_height: int = 180,
@@ -113,7 +116,7 @@ def get_droid_scene_cfg(
         data_types=("rgb", "depth"),
         enabled_geom_groups=(0, 2),
       )
-      for name in DROID_CAMERA_NAMES
+      for name in DROID_CUBE_CAMERA_NAMES
     )
     if camera_sensors
     else ()

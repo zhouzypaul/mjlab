@@ -66,7 +66,13 @@ viz-nan = "mjlab.scripts.nan_viz:main"
 export-scene = "mjlab.scripts.export_scene:main"
 
 [dependency-groups]
+droid-openpi = [
+  "msgpack>=1.0.5",
+  "pillow>=9.0.0",
+  "websockets>=15.0",
+]
 dev = [
+  {include-group = "droid-openpi"},
   "ipdb>=0.13.13",
   "pre-commit>=4.3.0",
   "pyright>=1.1.408",
@@ -145,6 +151,9 @@ exclude = [
 select = ["E4", "E7", "E9", "F", "I", "B"]
 ignore = ["B011"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["experiments"]
+
 [tool.pyright]
 pythonVersion = "3.10"
 venvPath = "."
@@ -153,13 +162,14 @@ ignore = ["./typings", "./src/mjlab/utils/lab_api", "./docs"]
 stubPath = "typings"
 
 [tool.ty.environment]
-extra-paths = ["typings"]
+extra-paths = [".", "tests", "typings"]
 
 [tool.ty.src]
-include = ["src", "tests"]
+include = ["src", "tests", "experiments", "scripts/demos/droid.py"]
 exclude = ["src/mjlab/utils/lab_api", "typings"]
 
 [tool.pytest.ini_options]
+pythonpath = ["."]
 markers = [
   "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]

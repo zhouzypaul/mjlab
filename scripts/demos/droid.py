@@ -13,9 +13,11 @@ import numpy as np
 import tyro
 from mjviser import Viewer
 
-from mjlab.asset_zoo.robots.droid.droid_constants import DROID_CAMERA_NAMES
-from mjlab.asset_zoo.robots.droid.scene import get_droid_scene_cfg
 from mjlab.scene import Scene
+from mjlab.tasks.manipulation.config.droid.cube_scene import (
+  DROID_CUBE_CAMERA_NAMES,
+  get_droid_cube_scene_cfg,
+)
 
 
 @dataclass
@@ -36,7 +38,7 @@ def run_droid(cfg: DroidConfig) -> None:
   if cfg.duration <= 0:
     raise ValueError("Duration must be positive")
   scene = Scene(
-    get_droid_scene_cfg(camera_height=cfg.height, camera_width=cfg.width),
+    get_droid_cube_scene_cfg(camera_height=cfg.height, camera_width=cfg.width),
     device="cpu",
   )
   model = scene.compile()
@@ -84,7 +86,7 @@ def run_droid(cfg: DroidConfig) -> None:
     options.geomgroup[3] = 0  # Hide overlapping collision meshes.
     options.sitegroup[:] = 0  # Keep debug sites out of camera observations.
     with mujoco.Renderer(model, height=cfg.height, width=cfg.width) as renderer:
-      for name in DROID_CAMERA_NAMES:
+      for name in DROID_CUBE_CAMERA_NAMES:
         camera = f"{'robot' if name == 'wrist_cam' else 'table'}/{name}"
         renderer.update_scene(data, camera=camera, scene_option=options)
         iio.imwrite(cfg.output_dir / f"{name}.png", renderer.render())

@@ -7,8 +7,8 @@ import numpy as np
 import pytest
 
 from mjlab.asset_zoo.robots.droid.droid_constants import DROID_HOME, get_spec
-from mjlab.asset_zoo.robots.droid.scene import get_droid_scene_cfg
 from mjlab.scene import Scene
+from mjlab.tasks.manipulation.config.droid.cube_scene import get_droid_cube_scene_cfg
 
 
 def test_droid_gripper_closes_and_reopens() -> None:
@@ -33,8 +33,52 @@ def test_droid_gripper_closes_and_reopens() -> None:
       assert np.all(data.qpos[drivers] < 0.01)
 
 
+def test_droid_mount_matches_reference_and_collides_with_objects() -> None:
+  spec = get_spec()
+  model = spec.compile()
+  data = mujoco.MjData(model)
+  mujoco.mj_resetDataKeyframe(model, data, 0)
+  mujoco.mj_forward(model, data)
+  link7 = model.body("link7").id
+  mount = model.geom("gripper_adapter").id
+  collision = model.geom("gripper_adapter_collision").id
+  assert model.geom_type[mount] == mujoco.mjtGeom.mjGEOM_CYLINDER
+  assert np.allclose(model.geom_size[mount, :2], (0.0375, 0.009))
+  assert np.allclose(model.geom_pos[mount], (0.0, 0.0, 0.116))
+  assert model.geom_group[mount] == 2
+  assert model.geom_contype[mount] == model.geom_conaffinity[mount] == 0
+  assert model.geom_group[collision] == 3
+  assert model.geom_contype[collision] == model.geom_conaffinity[collision] == 1
+  assert model.geom_bodyid[mount] == model.geom_bodyid[collision] == link7
+  # All mounting parts are welded; their intentional overlap is not a contact.
+  assert (
+    model.body_weldid[link7] == model.body_weldid[model.body("robotiq_base_mount").id]
+  )
+  assert not any(collision in (c.geom1, c.geom2) for c in data.contact)
+  rotation = data.xmat[link7].reshape(3, 3)
+  base = model.site("gripper_base").id
+  assert np.allclose(
+    rotation.T @ (data.site_xpos[base] - data.xpos[link7]),
+    (0.0, 0.0, 0.125174),
+  )
+  # Place an object at the adapter's side in the previously empty wrist gap.
+  probe_pos = data.xpos[link7] + rotation @ np.array((0.038, 0.0, 0.111))
+  spec.worldbody.add_geom(
+    name="mount_probe",
+    type=mujoco.mjtGeom.mjGEOM_SPHERE,
+    pos=probe_pos.tolist(),
+    size=(0.003, 0.0, 0.0),
+  )
+  model = spec.compile()
+  data = mujoco.MjData(model)
+  mujoco.mj_resetDataKeyframe(model, data, 0)
+  mujoco.mj_forward(model, data)
+  pair = {model.geom("gripper_adapter_collision").id, model.geom("mount_probe").id}
+  assert any({c.geom1, c.geom2} == pair and c.dist < 0 for c in data.contact)
+
+
 def test_droid_camera_frames_and_export(tmp_path: Path) -> None:
-  scene = Scene(get_droid_scene_cfg(camera_sensors=True), device="cpu")
+  scene = Scene(get_droid_cube_scene_cfg(camera_sensors=True), device="cpu")
   model = scene.compile()
   data = mujoco.MjData(model)
   mujoco.mj_resetDataKeyframe(model, data, 0)
@@ -69,3 +113,6 @@ def test_droid_camera_frames_and_export(tmp_path: Path) -> None:
   scene.write(tmp_path)
   exported = mujoco.MjModel.from_xml_path(str(tmp_path / "scene.xml"))
   assert (exported.nq, exported.nu, exported.ncam) == (22, 8, 3)
+  for name in ("robot/gripper_adapter", "robot/gripper_adapter_collision"):
+    assert np.allclose(exported.geom(name).size, model.geom(name).size)
+    assert np.allclose(exported.geom(name).pos, model.geom(name).pos)

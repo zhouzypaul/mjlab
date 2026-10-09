@@ -10,7 +10,7 @@ Run from the repository root:
 
 .. code-block:: bash
 
-   uv run -m mjlab.scripts.droid
+   uv run scripts/demos/droid.py
 
 Open the Viser URL printed in the terminal. Use the actuator controls to command
 the seven arm joints in radians and the gripper with normalized closure:
@@ -24,7 +24,7 @@ depth arrays:
 
 .. code-block:: bash
 
-   uv run -m mjlab.scripts.droid --viewer none --animate --duration 5 \
+   uv run scripts/demos/droid.py --viewer none --animate --duration 5 \
      --output-dir /tmp/droid --height 720 --width 1280
 
 On machines without EGL, prefix that command with ``MUJOCO_GL=osmesa`` (requires
@@ -38,11 +38,11 @@ Using the asset in mjlab
 .. code-block:: python
 
    from mjlab.asset_zoo.robots import get_droid_robot_cfg
-   from mjlab.asset_zoo.robots.droid.scene import get_droid_scene_cfg
+   from mjlab.tasks.manipulation.config.droid.cube_scene import get_droid_cube_scene_cfg
    from mjlab.scene import Scene
 
    robot_cfg = get_droid_robot_cfg()
-   scene_cfg = get_droid_scene_cfg(num_envs=16, camera_sensors=True)
+   scene_cfg = get_droid_cube_scene_cfg(num_envs=16, camera_sensors=True)
    scene = Scene(scene_cfg, device="cuda")
    model = scene.compile()
 
@@ -50,6 +50,14 @@ Camera elements always exist; ``camera_sensors=True`` also wires RGB and depth
 into mjlab's sensor system. The default resolution is 320 by 180. Use
 ``camera_width=1280, camera_height=720`` for RoboLab's resolution. Keep the 16:9
 aspect ratio to retain both horizontal and vertical fields of view.
+
+The robot asset contains the mechanism and mounted wrist camera. Workspaces
+live in ``mjlab.tasks.manipulation.config.droid``: ``cube_scene.py`` defines
+the table, cube, and exterior cameras. Add other workspaces as sibling
+``<name>_scene.py`` modules with their own scene configuration factories.
+The standalone demo lives in ``scripts/demos/droid.py``. OpenPI inference code
+lives separately in ``experiments/droid_openpi``; see the top-level
+``DROID_sim.md`` for model-server and inference commands.
 
 For batched simulation, use ``SimulationCfg`` with
 ``MujocoCfg(timestep=0.002, integrator="implicitfast", cone="elliptic", impratio=10)``.
@@ -77,6 +85,12 @@ RoboLab's Robotiq ``base_link`` points +X along the fingers, while Menagerie's
 gripper base points +Z along them. The wrist pose is converted between these
 frames, including its translation. The mount places the gripper base 0.125174 m
 along Panda link7's +Z, as measured from RoboLab's USD.
+
+The wrist adapter matches the PolaRiS/RoboLab cylinder: 75 mm diameter,
+18 mm thickness, centered 9 mm beyond the Panda flange (116 mm along link7's
++Z). It has separate visual and collision geoms, rigidly attached to link7.
+It overlaps Menagerie's gripper mounting plate; MuJoCo excludes contacts
+between these welded parts. The existing Menagerie link inertias are retained.
 
 The robot exposes ``gripper_base`` (RoboLab base_link axes), ``eef_frame``
 (RoboLab's rotated control frame), and ``grasp_site`` (the fingertip pinch center).

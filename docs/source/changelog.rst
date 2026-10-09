@@ -8,6 +8,9 @@ Upcoming version (not yet released)
 Added
 ^^^^^
 
+- Added OpenPI ``pi05_droid`` inference for the DROID tabletop simulation, with
+  RGB/state observations, normalized velocity control, and rollout records.
+
 - Added a DROID robot asset (Franka Panda with Robotiq 2F-85), a tabletop scene
   with RoboLab camera poses, and a CPU simulation demo with camera export.
 
@@ -16,6 +19,11 @@ Added
 
 Changed
 ^^^^^^^
+
+- Separated DROID robot assets, manipulation scenes, and OpenPI experiments.
+  The cube workspace lives in ``tasks/manipulation/config/droid/cube_scene.py``,
+  its demo in ``scripts/demos/droid.py``, and inference in
+  ``experiments/droid_openpi`` with a dedicated dependency group.
 
 - Bumped ``rsl-rl-lib`` from 5.5.0 to 5.5.1. This removes the need for capping
   ``wandb`` below 0.29.
@@ -26,6 +34,13 @@ Changed
 
 Fixed
 ^^^^^
+
+- Added the missing DROID wrist adapter using PolaRiS/RoboLab's cylinder
+  dimensions and placement, closing the visible arm/gripper gap and adding
+  mount collisions while retaining the gripper and camera transforms.
+
+- Fixed DROID inference camera rendering failing with ``EGL_BAD_ACCESS`` when
+  using the Viser Reset or paused Step buttons.
 
 - Capped ``wandb`` below 0.29, which removed the ``start_method`` setting still passed
   by ``rsl-rl-lib`` and crashed training runs launched with ``--logger wandb``.
