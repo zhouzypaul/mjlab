@@ -8,6 +8,9 @@ Upcoming version (not yet released)
 Added
 ^^^^^
 
+- Added a DROID robot asset (Franka Panda with Robotiq 2F-85), a tabletop scene
+  with RoboLab camera poses, and a CPU simulation demo with camera export.
+
 - Added ``SimulationCfg.graph_conditional`` to toggle MuJoCo Warp's CUDA graph
   conditional nodes, which require CUDA 12.4 or newer.
 

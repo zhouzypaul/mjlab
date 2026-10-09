@@ -44,6 +44,7 @@ Table of Contents
 
    source/installation
    source/tutorials
+   source/droid
    source/contributing
 
 .. toctree::

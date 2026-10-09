@@ -1,3 +1,6 @@
+from mjlab.asset_zoo.robots.droid.droid_constants import (
+  get_droid_robot_cfg as get_droid_robot_cfg,
+)
 from mjlab.asset_zoo.robots.i2rt_yam.yam_constants import (
   YAM_ACTION_SCALE as YAM_ACTION_SCALE,
 )
